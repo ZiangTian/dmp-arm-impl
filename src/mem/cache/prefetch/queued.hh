@@ -176,6 +176,8 @@ class Queued : public Base
     /** Percentage of requests that can be throttled */
     const unsigned int throttleControlPct;
 
+    virtual bool allowPageCrossing() const { return false; }
+
     struct QueuedStats : public statistics::Group
     {
         QueuedStats(statistics::Group *parent);

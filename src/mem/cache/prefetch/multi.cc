@@ -59,6 +59,9 @@ Multi::setParentInfo(System *sys, ProbeManager *pm, unsigned blk_size)
         pf->setParentInfo(sys, pm, blk_size);
 }
 
+/**
+ * Iterate through all prefetchers to find the minimum next ready time.
+ */
 Tick
 Multi::nextPrefetchReadyTime() const
 {

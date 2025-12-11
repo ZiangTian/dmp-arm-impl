@@ -341,6 +341,9 @@ class BaseCache : public ClockedObject
         bool coalesce() const override
         { return cache.coalesce(); }
 
+        CacheBlk* getCacheLine(Addr addr, bool is_secure) const override
+        { return cache.getBlk(addr, is_secure); }
+
     } accessor;
 
     /** Miss status registers */
@@ -1296,6 +1299,10 @@ class BaseCache : public ClockedObject
         CacheBlk *block = tags->findBlock({addr, is_secure});
         return block && block->wasPrefetched() &&
                (block->getSrcRequestorId() == requestor);
+    }
+
+    CacheBlk* getBlk(Addr addr, bool is_secure) const {
+        return tags->findBlock({addr, is_secure});
     }
 
     bool inMissQueue(Addr addr, bool is_secure) const {

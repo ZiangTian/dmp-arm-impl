@@ -65,12 +65,23 @@ Base::PrefetchInfo::PrefetchInfo(PacketPtr pkt, Addr addr, bool miss)
     paddress(pkt->req->getPaddr()), cacheMiss(miss)
 {
     unsigned int req_size = pkt->req->getSize();
+    // std::cout << "PrefetchInfo: Creating for address 0x"
+    //           << std::hex << addr << std::dec
+    //           << " size " << req_size
+    //           << " write " << write
+    //           << " miss " << miss 
+    //           << " hasData " << pkt->hasData() << "\n";
     if ((!write && miss) || !pkt->hasData()) {
         data = nullptr;
+        // std::cout << "PrefetchInfo: No data copied for address 0x"
+        //           << std::hex << addr << std::dec << "\n";
     } else {
         data = new uint8_t[req_size];
         Addr offset = pkt->req->getPaddr() - pkt->getAddr();
         std::memcpy(data, &(pkt->getConstPtr<uint8_t>()[offset]), req_size);
+        // std::cout << "PrefetchInfo: Copied " << req_size
+        //           << " bytes of data for address 0x"
+        //           << std::hex << addr << std::dec << "\n";
     }
 }
 
@@ -260,9 +271,13 @@ Base::probeNotify(const CacheAccessProbeArg &acc, bool miss)
     if (observeAccess(pkt, miss, has_been_prefetched)) {
         if (useVirtualAddresses && pkt->req->hasVaddr()) {
             PrefetchInfo pfi(pkt, pkt->req->getVaddr(), miss);
+            // std::cout << "Prefetcher using virtual address: 0x"
+            //           << std::hex << pkt->req->getVaddr() << std::dec << "\n";
             notify(acc, pfi);
         } else if (!useVirtualAddresses) {
             PrefetchInfo pfi(pkt, pkt->req->getPaddr(), miss);
+            // std::cout << "Prefetcher using physical address: 0x"
+            //           << std::hex << pkt->req->getPaddr() << std::dec << "\n";
             notify(acc, pfi);
         }
     }

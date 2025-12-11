@@ -452,7 +452,7 @@ BaseCache::recvTimingReq(PacketPtr pkt)
     if (satisfied) {
         // notify before anything else as later handleTimingReqHit might turn
         // the packet in a response
-        ppHit->notify(CacheAccessProbeArg(pkt,accessor));
+        ppHit->notify(CacheAccessProbeArg(pkt,accessor)); // DMP: prefetcher's notify func was called; receives a prefetchinfo obj
 
         if (prefetcher && blk && blk->wasPrefetched()) {
             DPRINTF(Cache, "Hit on prefetch for addr %#x (%s)\n",
@@ -467,7 +467,7 @@ BaseCache::recvTimingReq(PacketPtr pkt)
         ppMiss->notify(CacheAccessProbeArg(pkt,accessor));
     }
 
-    if (prefetcher) {
+    if (prefetcher) { // where prefetcher comes in *TODO-DMP*
         // track time of availability of next prefetch, if any
         Tick next_pf_time = std::max(
                             prefetcher->nextPrefetchReadyTime(), clockEdge());
@@ -1164,6 +1164,12 @@ BaseCache::satisfyRequest(PacketPtr pkt, CacheBlk *blk, bool, bool)
         blk->setCoherenceBits(CacheBlk::DirtyBit);
         DPRINTF(CacheVerbose, "%s for %s (write)\n", __func__, pkt->print());
     } else if (pkt->isRead()) {
+        if (pkt->fromCache()) {
+            // block came from cache (L2), no need to scan for DMP
+            blk->dmpNoScan = true; // or false. need to think about the model TODO
+            DPRINTF(Cache, "Setting DMP no-scan flag for block %#x\n", 
+                regenerateBlkAddr(blk));
+        }
         if (pkt->isLLSC()) {
             blk->trackLoadLocked(pkt);
         }

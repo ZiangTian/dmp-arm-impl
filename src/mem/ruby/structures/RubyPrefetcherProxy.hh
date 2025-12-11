@@ -173,6 +173,13 @@ class RubyPrefetcherProxy : public CacheAccessor, public Named
     bool coalesce() const override
     { return cacheCntrl->coalesce(); }
 
+    CacheBlk* getCacheLine(Addr addr, bool is_secure) const override
+    {
+        // return cacheCntrl->getCacheLine(addr, is_secure);
+        // Ruby doesnt expost CacheBlk directly, so return nullptr
+        return nullptr;
+    }
+
 };
 
 } // namespace ruby

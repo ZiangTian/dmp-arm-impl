@@ -727,3 +727,19 @@ class PIFPrefetcher(QueuedPrefetcher):
         self.addEvent(
             HWPProbeEventRetiredInsts(self, simObj, "RetiredInstsPC")
         )
+
+class DMPPrefetcher(QueuedPrefetcher):
+    type = "DMPPrefetcher"
+    cxx_class = "gem5::prefetch::DMP"
+    cxx_header = "mem/cache/prefetch/dmp.hh"
+
+    # whether to dereference data as pointers
+    chase_pointers = Param.Bool(True, "Whether to dereference data as pointers")
+    # history table entries
+    history_table_entries = Param.Int(256, "Number of entries in history filter")
+    
+    # DMP must see virtual addresses to chase pointers
+    use_virtual_addresses = True
+    on_data = True
+    on_inst = False  # Don't trigger on instruction fetches
+    prefetch_on_access = True # Trigger on all L2 cache accesses

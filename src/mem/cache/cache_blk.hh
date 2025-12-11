@@ -109,6 +109,15 @@ class CacheBlk : public TaggedEntry
      */
     Tick whenReady = 0;
 
+    /**
+     * Whether this block has been scanned before so it should not be scanned again
+     *  (once an L1 line has been scanned upon entering the cache)
+     * only way to clear this is to evict the line from both L1 and L2
+     */
+    bool dmpNoScan = false;
+
+    void setDmpNoScan() { dmpNoScan = true; }
+
   protected:
     /**
      * Represents that the indicated thread context has a "lock" on
@@ -212,6 +221,7 @@ class CacheBlk : public TaggedEntry
         setRefCount(0);
         setSrcRequestorId(Request::invldRequestorId);
         lockList.clear();
+        dmpNoScan = false;
     }
 
     /**

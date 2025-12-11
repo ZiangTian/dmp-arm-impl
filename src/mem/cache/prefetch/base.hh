@@ -217,6 +217,15 @@ class Base : public ClockedObject
         }
 
         /**
+         * Check if data is available for this prefetch event
+         * @result true if data is available
+         */
+        bool hasData() const
+        {
+            return data != nullptr;
+        }
+
+        /**
          * Gets the associated data of the request triggering the event
          * @param Byte ordering of the stored data
          * @return the data

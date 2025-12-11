@@ -40,6 +40,7 @@
 #define __MEM_CACHE_PROBE_ARG_HH__
 
 #include "mem/packet.hh"
+#include "mem/cache/cache_blk.hh"
 
 namespace gem5
 {
@@ -68,6 +69,10 @@ struct CacheAccessor
 
     /** Determine if cache is coalescing writes */
     virtual bool coalesce() const = 0;
+
+    /** Return the cacheline being queried */
+    virtual const CacheBlk *getCacheLine(Addr addr,
+                                          bool is_secure) const = 0;
 };
 
 /**

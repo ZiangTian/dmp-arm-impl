@@ -36,3 +36,6 @@ configs/dram/lowp_sweep.cfg
 .vscode
 typings
 .DS_Store
+m5out_*
+mybuild/mybuildout
+*.log

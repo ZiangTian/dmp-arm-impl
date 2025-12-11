@@ -131,13 +131,40 @@ def config_cache(options, system):
         # Provide a clock for the L2 and the L1-to-L2 bus here as they
         # are not connected using addTwoLevelCacheHierarchy. Use the
         # same clock as the CPUs.
+        l2_opts = _get_cache_opts("l2", options)
+        
+        # Check if DMP is explicitly requested via --dmp flag
+        if hasattr(options, 'dmp') and options.dmp:
+            print("DMP Prefetcher explicitly enabled on L2 cache via --dmp flag")
+            l2_opts["prefetcher"] = DMPPrefetcher(
+                chase_pointers = True,
+                history_table_entries = 256,
+                use_virtual_addresses = True,
+            )
+        # Otherwise, do not set DMP
+        elif "prefetcher" not in l2_opts:
+            l2_opts["prefetcher"] = DMPPrefetcher(
+                chase_pointers = False,
+                history_table_entries = 256,
+                use_virtual_addresses = True,
+            )
+            print("DMP Prefetcher disabled")
+        
         system.l2 = l2_cache_class(
-            clk_domain=system.cpu_clk_domain, **_get_cache_opts("l2", options)
+            clk_domain=system.cpu_clk_domain, **l2_opts
         )
+        # Enable prefetch_on_access to trigger on all L2 accesses (L1 misses)
+        # system.l2.prefetch_on_access = True
 
         system.tol2bus = L2XBar(clk_domain=system.cpu_clk_domain)
         system.l2.cpu_side = system.tol2bus.mem_side_ports
         system.l2.mem_side = system.membus.cpu_side_ports
+
+        for cpu in system.cpu:
+            if hasattr(cpu, 'mmu') and cpu.mmu:
+                if hasattr(system.l2.prefetcher, 'registerMMU'):
+                    system.l2.prefetcher.registerMMU(cpu.mmu)
+                    system.l2.prefetcher.queue_size = 1024 # need to increase queue size for DMP with MMU
 
     if options.memchecker:
         system.memchecker = MemChecker()

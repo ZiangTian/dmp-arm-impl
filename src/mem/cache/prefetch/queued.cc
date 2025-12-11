@@ -59,7 +59,7 @@ Queued::DeferredPacket::createPkt(Addr paddr, unsigned blk_size,
                                             RequestorID requestor_id,
                                             bool tag_prefetch,
                                             Tick t) {
-    /* Create a prefetch memory request */
+    /* Create a prefetch memory request; didnt provide contextid, so only PA is available */
     RequestPtr req = std::make_shared<Request>(paddr, blk_size,
                                                 0, requestor_id);
 
@@ -69,6 +69,8 @@ Queued::DeferredPacket::createPkt(Addr paddr, unsigned blk_size,
     req->taskId(context_switch_task_id::Prefetcher);
     pkt = new Packet(req, MemCmd::HardPFReq);
     pkt->allocate();
+    // distinguish prefetches from demand accesses
+    // pkt->setPrefetch(true);
     if (tag_prefetch && pfInfo.hasPC()) {
         // Tag prefetch packet with  accessing pc
         pkt->req->setPC(pfInfo.getPC());
@@ -217,7 +219,8 @@ Queued::notify(const CacheAccessProbeArg &acc, const PrefetchInfo &pfi)
             }
         }
 
-        bool can_cross_page = (mmu != nullptr);
+        bool can_cross_page = (mmu != nullptr); // std::cout << "can_cross_page: " << can_cross_page << std::endl;
+        // can_cross_page = can_cross_page || allowPageCrossing();
         if (can_cross_page || samePage(addr_prio.first, pfi.getAddr())) {
             PrefetchInfo new_pfi(pfi,addr_prio.first);
             statsQueued.pfIdentified++;
@@ -283,7 +286,8 @@ Queued::QueuedStats::QueuedStats(statistics::Group *parent)
 {
 }
 
-
+// process the queue of requests that dont have a PA yet.
+// in DMP, these requests come from cross page prefetches
 void
 Queued::processMissingTranslations(unsigned max)
 {
@@ -299,6 +303,7 @@ Queued::processMissingTranslations(unsigned max)
     }
 }
 
+// move a request from the queue of pending translations to the prefetch queue
 void
 Queued::translationComplete(DeferredPacket *dp, bool failed,
                             const CacheAccessor &cache)
@@ -434,6 +439,8 @@ Queued::insert(const PacketPtr &pkt, PrefetchInfo &new_pfi,
 
         // ContextID is needed for translation
         if (!pkt->req->hasContextId()) {
+            DPRINTF(HWPrefetch, "Prefetch request without context ID, "
+                    "unable to process.\n");
             return;
         }
         if (useVirtualAddresses) {
@@ -465,7 +472,7 @@ Queued::insert(const PacketPtr &pkt, PrefetchInfo &new_pfi,
 
     /* Create the packet and find the spot to insert it */
     DeferredPacket dpp(this, new_pfi, 0, priority, cache);
-    if (has_target_pa) {
+    if (has_target_pa) {  // we using VA. this comes from same page prefetch
         Tick pf_time = curTick() + clockPeriod() * latency;
         dpp.createPkt(target_paddr, blkSize, requestorId, tagPrefetch,
                       pf_time);
@@ -473,7 +480,7 @@ Queued::insert(const PacketPtr &pkt, PrefetchInfo &new_pfi,
                 "addr:%#x priority: %3d tick:%lld.\n",
                 new_pfi.getAddr(), priority, pf_time);
         addToQueue(pfq, dpp);
-    } else {
+    } else { // cross page VA prefetch
         // Add the translation request and try to resolve it later
         dpp.setTranslationRequest(translation_req);
         dpp.tc = system->threads[translation_req->contextId()];

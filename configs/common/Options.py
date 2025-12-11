@@ -335,6 +335,12 @@ def addCommonOptions(parser, default_isa: Optional[ISA] = None):
                         (if not set, use the default prefetcher of
                         the selected cache)""",
     )
+    parser.add_argument(
+        "--dmp",
+        action="store_true",
+        default=False,
+        help="Enable DMP (Data Memory-dependent Prefetcher) on L2 cache",
+    )
     parser.add_argument("--checker", action="store_true")
     parser.add_argument(
         "--cpu-clock",

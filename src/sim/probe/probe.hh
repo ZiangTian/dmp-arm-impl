@@ -195,7 +195,7 @@ class ProbeManager : public Named
     ProbePoint *getFirstProbePoint(std::string_view point_name) const;
 
     template <typename Listener, typename... Args>
-    ProbeListenerPtr<Listener> connect(Args &&...args)
+    ProbeListenerPtr<Listener>  connect(Args &&...args)
     {
         ProbeListenerPtr<Listener> result(
             new Listener(std::forward<Args>(args)...),
