@@ -39,3 +39,4 @@ typings
 m5out_*
 mybuild/mybuildout
 *.log
+READ.md

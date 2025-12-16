@@ -28,12 +28,6 @@ class DMP : public Queued
     
     const ByteOrder byteOrder;
 
-    /** OR: should we do no-scan set at prefetcher level? 
-     * Track recently filled lines from L2 to avoid rescanning 
-     */
-    // std::unordered_set<Addr> noScanSet;
-    // const unsigned noScanSetSize;
-
   public:
     // Constructor taking the params struct
     DMP(const DMPPrefetcherParams &p);

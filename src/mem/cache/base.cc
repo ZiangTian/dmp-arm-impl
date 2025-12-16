@@ -1164,12 +1164,6 @@ BaseCache::satisfyRequest(PacketPtr pkt, CacheBlk *blk, bool, bool)
         blk->setCoherenceBits(CacheBlk::DirtyBit);
         DPRINTF(CacheVerbose, "%s for %s (write)\n", __func__, pkt->print());
     } else if (pkt->isRead()) {
-        if (pkt->fromCache()) {
-            // block came from cache (L2), no need to scan for DMP
-            blk->dmpNoScan = true; // or false. need to think about the model TODO
-            DPRINTF(Cache, "Setting DMP no-scan flag for block %#x\n", 
-                regenerateBlkAddr(blk));
-        }
         if (pkt->isLLSC()) {
             blk->trackLoadLocked(pkt);
         }

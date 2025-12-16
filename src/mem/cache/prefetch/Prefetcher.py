@@ -737,6 +737,11 @@ class DMPPrefetcher(QueuedPrefetcher):
     chase_pointers = Param.Bool(True, "Whether to dereference data as pointers")
     # history table entries
     history_table_entries = Param.Int(256, "Number of entries in history filter")
+    # reset_threshold_ticks
+    reset_threshold_ticks = Param.Int(
+        1000000,
+        "Number of ticks without a prefetch before resetting the history table",
+    )
     
     # DMP must see virtual addresses to chase pointers
     use_virtual_addresses = True

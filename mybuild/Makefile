@@ -7,10 +7,10 @@ EXAMPLE_FLAGS=-O0 -g
 # GEM5_TRACE_FLAG=--debug-break=1355932000
 # If compile failed, explicitly do this: export PATH=$PATH:/gem5/riscv-released/riscv/bin/
 GEM5_TRACE_FLAG=
-RUN_SIM=./build/ARM/gem5.opt --outdir=m5out_dmp $(GEM5_TRACE_FLAG) configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache --dmp -c
-RUN_SIM_NO_DMP=./build/ARM/gem5.opt --outdir=m5out_none $(GEM5_TRACE_FLAG) configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache -c
-DEBUG_SIM=./build/ARM/gem5.opt --outdir=m5out_dmp --debug-flags=HWPrefetch configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache --dmp -c
-DEBUG_SIM_NO_DMP=./build/ARM/gem5.opt --outdir=m5out_none --debug-flags=HWPrefetch configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache -c
+RUN_SIM=./build/ARM/gem5.opt --outdir=m5out_dmp $(GEM5_TRACE_FLAG) configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache --dmp --l1d_size=64kB --l1i_size=32kB --l2_size=512kB --l3_size=4MB --l3_size=4MB --cacheline_size=64 -c
+RUN_SIM_NO_DMP=./build/ARM/gem5.opt --outdir=m5out_none $(GEM5_TRACE_FLAG) configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache --l1d_size=64kB --l1i_size=32kB --l2_size=512kB --l3_size=4MB --l3_size=4MB --cacheline_size=64 -c
+DEBUG_SIM=./build/ARM/gem5.opt --outdir=m5out_dmp --debug-flags=HWPrefetch configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache --dmp --l1d_size=64kB --l1i_size=32kB --l2_size=512kB --l3_size=4MB --l3_size=4MB --cacheline_size=64 -c
+DEBUG_SIM_NO_DMP=./build/ARM/gem5.opt --outdir=m5out_none --debug-flags=HWPrefetch configs/deprecated/example/se.py --cpu-type=DerivO3CPU --caches --l2cache --l1d_size=64kB --l1i_size=32kB --l2_size=512kB --l3_size=4MB --l3_size=4MB --cacheline_size=64 -c
 
 gem5:
 		cd .. && scons build/ARM/gem5.opt -j$(PARALLEL_COUNT)
@@ -18,7 +18,7 @@ gem5:
 mybuildout/test-umov: ../tests/test-progs/hello/src/hello.c
 		aarch64-linux-gnu-g++ $^ $(EXAMPLE_FLAGS) -static -o $@
 
-mybuildout/test-ptrchase: ../tests/test-progs/dmp/pointer_chasing.cpp
+mybuildout/test-ptrchase: ../tests/test-progs/dmp/pointer_chasing.cpp # radical_chase.cpp 
 		aarch64-linux-gnu-g++ $^ $(EXAMPLE_FLAGS) -static -o $@
 
 # mybuildout/test-hfi: ../tests/test-progs/hfi/test-hfi.cpp ../tests/test-progs/hfi/hfi.S

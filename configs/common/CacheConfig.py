@@ -48,6 +48,15 @@ from m5.objects import *
 
 from gem5.isas import ISA
 
+class L3Cache(Cache):
+    assoc = 16
+    tag_latency = 100
+    data_latency = 100
+    response_latency = 100
+    mshrs = 512
+    tgts_per_mshr = 20
+    size = '2MB'           # Default size, overridden by CLI options
+    assoc = 16
 
 def _get_hwp(hwp_option):
     if hwp_option == None:
@@ -117,6 +126,8 @@ def config_cache(options, system):
             None,
         )
 
+        l3_cache_class = L3Cache
+
     # Set the cache line size of the system
     system.cache_line_size = options.cacheline_size
 
@@ -147,6 +158,7 @@ def config_cache(options, system):
                 chase_pointers = False,
                 history_table_entries = 256,
                 use_virtual_addresses = True,
+                reset_threshold_ticks = 1000000,
             )
             print("DMP Prefetcher disabled")
         
@@ -158,13 +170,27 @@ def config_cache(options, system):
 
         system.tol2bus = L2XBar(clk_domain=system.cpu_clk_domain)
         system.l2.cpu_side = system.tol2bus.mem_side_ports
-        system.l2.mem_side = system.membus.cpu_side_ports
+        # system.l2.mem_side = system.membus.cpu_side_ports
+
+        # L3 configuration
+        if hasattr(options, 'l3_size'):
+            print("Configuring L3 cache of size %s" % options.l3_size)
+            l3_opts = _get_cache_opts("l3", options)
+            system.l3 = l3_cache_class(
+                clk_domain=system.cpu_clk_domain, **l3_opts
+            )
+            system.tol3bus = L2XBar(clk_domain=system.cpu_clk_domain, width=64)
+            system.l3.cpu_side = system.tol3bus.mem_side_ports
+            system.l3.mem_side = system.membus.cpu_side_ports
+            system.l2.mem_side = system.tol3bus.cpu_side_ports
+        else:
+            system.l2.mem_side = system.membus.cpu_side_ports
 
         for cpu in system.cpu:
             if hasattr(cpu, 'mmu') and cpu.mmu:
                 if hasattr(system.l2.prefetcher, 'registerMMU'):
                     system.l2.prefetcher.registerMMU(cpu.mmu)
-                    system.l2.prefetcher.queue_size = 1024 # need to increase queue size for DMP with MMU
+                    system.l2.prefetcher.queue_size = 1024 # 1024 # need to increase queue size for DMP with MMU
 
     if options.memchecker:
         system.memchecker = MemChecker()

@@ -77,6 +77,15 @@ class L2Cache(Cache):
     tgts_per_mshr = 12
     write_buffers = 8
 
+class L3Cache(Cache):
+    assoc = 16
+    tag_latency = 100
+    data_latency = 100
+    response_latency = 100
+    mshrs = 512
+    tgts_per_mshr = 20
+    size = '2MB'           # Default size, overridden by CLI options
+    assoc = 16
 
 class IOCache(Cache):
     assoc = 8

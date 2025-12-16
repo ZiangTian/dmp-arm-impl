@@ -31,19 +31,20 @@ namespace gem5
 namespace prefetch
 {
 
-// Constructor: Pass params to parent 'Queued' class and initialize your members
 DMP::DMP(const DMPPrefetcherParams &p)
     : Queued(p),
         chasePointers(p.chase_pointers),
         historyTable(p.history_table_entries, 0),
         historyTableSize(p.history_table_entries),
-        byteOrder(p.sys->getGuestByteOrder())
+        byteOrder(p.sys->getGuestByteOrder()),
+        resetThreshold(p.reset_threshold_ticks)
 {
     DPRINTF(HWPrefetch, "DMP Prefetcher initialized!\n");
     DPRINTF(HWPrefetch, "  chase_pointers: %d\n", chasePointers);
     DPRINTF(HWPrefetch, "  history_table_entries: %d\n", historyTableSize);
     DPRINTF(HWPrefetch, "  block_size: %d\n", blkSize);
     DPRINTF(HWPrefetch, "  use_virtual_addresses: %d\n", useVirtualAddresses);
+    DPRINTF(HWPrefetch, "  reset_threshold_ticks: %lu\n", resetThreshold);
 }
 
 bool DMP::inHistoryTable(Addr target_addr) {
@@ -62,10 +63,8 @@ void DMP::checkResetHistoryTable() {
         DPRINTF(HWPrefetch, "DMP: Resetting history table due to inactivity\n");
         std::fill(historyTable.begin(), historyTable.end(), 0);
     }
-    lastPrefetchTick = curTick(); // update here or at the end of calculatePrefetch?
+    lastPrefetchTick = curTick();
 }
-
-// TODO: in notify and notifyFill, pass whole cache block hit or prefetched into the pfi 
 
 void
 DMP::notifyFill(const CacheAccessProbeArg &acc)
@@ -133,20 +132,11 @@ DMP::notify(const CacheAccessProbeArg &acc, const PrefetchInfo &pfi)
     const PacketPtr &pkt = acc.pkt;
     const CacheAccessor &cache = acc.cache;
 
-    // if (pkt->cmd.isHWPrefetch() ||
-    //     pkt->cmd == MemCmd::HardPFReq || 
-    //     pkt->cmd == MemCmd::HardPFResp ||
-    //     pkt->req->isPrefetch()) {
-    //     DPRINTF(HWPrefetch, "DMP::notifyFill skipping HW prefetch packet (cmd: %s)\n",
-    //             pkt->cmd.toString());
-    //     return;
-    // }
+    // filter out prefetch-generated accesses
     if (pkt->req->taskId() == context_switch_task_id::Prefetcher) {
         DPRINTF(HWPrefetch, "DMP::notify skipping prefetch (taskId=Prefetcher)\n");
         return;
     }
-
-    // if(pkt->cmd.isHWPrefetch()) return;
 
     // only look at L2 hits, because misses won't have data to scan yet; we delegate fills to notifyFill()
     if (pfi.isCacheMiss()) {
@@ -249,8 +239,6 @@ DMP::calculatePrefetch(const PrefetchInfo &pfi,
     //     DPRINTF(HWPrefetch, "\n");
     // }
 
-    // Scan each 64-bit aligned chunk in the ENTIRE cache line
-    // blkSize is typically 64 bytes, giving us 8 candidate pointers
     const unsigned num_candidates = blkSize / sizeof(uint64_t);
     // DPRINTF(HWPrefetch, "DMP: Scanning %d candidate pointers (blkSize=%d)\n",
     //         num_candidates, blkSize);
@@ -287,12 +275,8 @@ DMP::calculatePrefetch(const PrefetchInfo &pfi,
         */
         
         // 4GB Region Rule: Check if upper 32 bits match the current access
-        // This filters out invalid pointers
         uint64_t current_upper = (virt_addr >> 32) & 0xFFFFFFFF;
         uint64_t candidate_upper = (candidate_ptr >> 32) & 0xFFFFFFFF;
-        
-        // DPRINTF(HWPrefetch, "DMP: 4GB check - current_upper: %#x, candidate_upper: %#x\n",
-        //         current_upper, candidate_upper);
         
         if (current_upper != candidate_upper) {
             DPRINTF(HWPrefetch, "DMP: Candidate %#llx FAILED 4GB region check\n",
@@ -304,8 +288,6 @@ DMP::calculatePrefetch(const PrefetchInfo &pfi,
         
         // Check history filter to avoid redundant prefetches
         Addr target_block = blockAddress(candidate_ptr);
-        // DPRINTF(HWPrefetch, "DMP: Target block address: %#x\n", target_block);
-        
         if (inHistoryTable(target_block)) {
             DPRINTF(HWPrefetch, "DMP: Target %#x ALREADY in history, skipping\n",
                     target_block);

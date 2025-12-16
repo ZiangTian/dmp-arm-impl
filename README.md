@@ -1,89 +1,32 @@
-DMP Final Implementation: Handling L2 Hits and Fills
-The Complete Picture
-DMP must trigger when L1 misses and L2 is accessed, regardless of whether L2 hits or misses:
+# Data Memory Dependent Prefetcher Impl
 
-```Scenario 1: L1 Miss → L2 Hit
-L1 miss → L2 access → L2 HIT (data in L2)
-    ↓
-ppHit->notify() fires
-    ↓
-DMP::notify() called ✓
-    ↓
-Scans data from L2
-Scenario 2: L1 Miss → L2 Miss
-L1 miss → L2 access → L2 MISS (data not in L2)
-    ↓
-Fetch from memory/L3
-    ↓
-handleFill() - writes data to L2
-    ↓
-ppFill->notify() fires
-    ↓
-DMP::notifyFill() called ✓
-    ↓
-Scans data just filled into L2
-```
-
-Implementation
-
-```notify()
- - Handles L2 Hits
-void DMP::notify(const CacheAccessProbeArg &acc, const PrefetchInfo &pfi)
-{
-    // Called on L2 hits - data already in L2
-    if (!pfi.hasData()) {
-        return;  // Safety check
-    }
-    
-    // Data available from L2, scan for pointers
-    Queued::notify(acc, pfi);
-}
-notifyFill()
- - Handles L2 Fills
-void DMP::notifyFill(const CacheAccessProbeArg &acc)
-{
-    const PacketPtr &pkt = acc.pkt;
-    
-    // Called after L2 fills from memory/L3
-    if (!pkt->isRead() || pkt->cmd.isHWPrefetch()) {
-        return;
-    }
-    
-    // Create PrefetchInfo with filled data
-    PrefetchInfo pfi(pkt, pkt->getAddr(), false);
-    
-    // Data available from fill, scan for pointers
-    Queued::notify(acc, pfi);
-}```
-
-Key Points
+## Quick test run
 
 ```
-Both paths have data available - that's the critical requirement
-L2 hits: Data already in cache → 
-notify()
-L2 fills: Data just fetched → 
-notifyFill()
-Both call Queued::notify() which invokes 
-calculatePrefetch()
-calculatePrefetch()
- has safety check - if (!pfi.hasData()) return;
+cd mybuild
+make debug-umov > umov.log 2>&1
 ```
 
-Testing
-After rebuild:
+`umov.log` logs details for every prefetcher event, blocks accessed, and pointer candidates.
 
-make debug-ptrchase
-Expected output for L2 hits:
+## Test program
 
-DMP::notify called for addr 0x... (hasData: 1)
-DMP: Data available, proceeding with pointer scan
-Expected output for L2 fills:
+```
+cd mybuild
+nohup make test-no-dmp-ptrchase > db.log 2>&1 &
+nohup make test-ptrchase > db_dmp.log 2>&1 &
+```
 
-DMP::notifyFill called for addr 0x... (hasData: 1)
-DMP: Data available, proceeding with pointer scan
-Both paths should generate prefetches!
+## Key implementation
 
-Issues:
+Main implementation is in  `src/mem/cache/prefetch/dmp.hh` and `src/mem/cache/prefetch/dmp.cc`. One key strategy is, to activate DMP on L1 cache miss and prefetch into L2, we design DMP to activate on any L2 access. This includes L2 hit and L2 miss. Since we need to have the requested block to scan when activating the prefetcher, we have two notify functions that trigger the activation: `notify()` and `notifyFill()`. `notify()` is only called on L2 hits; `notifyFill()` is called only on L2 fills (after the data missed in L2 is serviced from the DRAM).
 
-after adding more filters in the notify function, enforcing using virtual address, and plugging in an MMU (also force accessing the cache using virtual address), no prefetch requests are issued anymore...
+`configs/common/CacheConfig.py` contains parameters for caches that can be tweaked. An MMU is plugged in here to solve the cross-page prefetch bug.
+
+For more internals, `src/mem/cache/base.cc`, `src/mem/cache/prefetch/base.cc`, and `src/mem/cache/prefetch/queued.cc` are recommended to check out. 
+
+
+
+
+
+
