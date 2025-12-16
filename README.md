@@ -4,6 +4,7 @@
 
 ```
 cd mybuild
+mkdir -p mybuildout
 make debug-umov > umov.log 2>&1
 ```
 

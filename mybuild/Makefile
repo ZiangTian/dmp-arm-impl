@@ -21,13 +21,7 @@ mybuildout/test-umov: ../tests/test-progs/hello/src/hello.c
 mybuildout/test-ptrchase: ../tests/test-progs/dmp/pointer_chasing.cpp # radical_chase.cpp 
 		aarch64-linux-gnu-g++ $^ $(EXAMPLE_FLAGS) -static -o $@
 
-# mybuildout/test-hfi: ../tests/test-progs/hfi/test-hfi.cpp ../tests/test-progs/hfi/hfi.S
-# 		riscv64-linux-gnu-g++ $^ $(EXAMPLE_FLAGS) -static -o $@
-
 build-tests: mybuildout/test-umov mybuildout/test-ptrchase
-
-# build: gem5 build-tests
-
 
 test-umov: build-tests
 		cd .. && $(RUN_SIM) mybuild/mybuildout/test-umov -o 5
@@ -46,19 +40,3 @@ test-no-dmp-ptrchase: build-tests
 
 debug-no-dmp-ptrchase: build-tests
 		cd .. && $(DEBUG_SIM_NO_DMP) mybuild/mybuildout/test-ptrchase
-
-#         cd .. && $(RUN_SIM) mybuild/mybuildout/test-hfi
-# debug-hfi: build-tests
-#         cd .. && $(DEBUG_SIM) mybuild/mybuildout/test-hfi
-
-# debug-wasm: build-tests
-#         cd .. && $(DEBUG_SIM) tests/test-progs/wasm2c-test/hfi-test/riscv_test
-
-# test-wasm: build-tests
-#         cd .. && $(RUN_SIM) tests/test-progs/wasm2c-test/hfi-test/riscv_test
-
-# debug-sep: build-tests
-#         cd .. && $(DEBUG_SIM) tests/test-progs/sepstack-test/build/sepstack-riscv-test
-
-# test-sep: build-tests
-#         cd .. && $(RUN_SIM) tests/test-progs/sepstack-test/build/sepstack-riscv-test
